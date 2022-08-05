@@ -41,15 +41,15 @@ app.get("/books/", async (request, response) => {
 
 //Create user API
 
-app.post("/users/", async(request, response) => {
+app.post("/users/", async (request, response) => {
   const { username, name, password, gender, location } = request.body;
-  const hashedPassword = bcrypt.hash(password, 10);
+  const hashedPassword = await bcrypt.hash(password, 10);
   const selectUserQuery = `SELECT * FROM user where username = '${username}';`;
   const dbUser = await db.get(selectUserQuery);
 
-  if dbUser === undefined{
-      //creat user in userTable
-      const createUserQuery = `
+  if (dbUser === undefined) {
+    //creat user in userTable
+    const createUserQuery = `
   INSERT INTO
     user (username, name, password, gender, location)
   VALUES
@@ -61,11 +61,32 @@ app.post("/users/", async(request, response) => {
       '${location}'  
     );`;
     await db.run(createUserQuery);
-    response.send("User created Successfully")
+    response.send("User created Successfully");
+  } else {
+    //send invalid username as response
+    response.status(400);
+    response.send("username already exists ");
   }
-  else{
-      //send invalid username as response
+});
+
+//user login API
+
+app.post("/login/", async (request, response) => {
+  const { username, password } = request.body;
+  const selectUserQuery = `SELECT * FROM user where username = '${username}';`;
+  const dbUser = await db.get(selectUserQuery);
+  if (dbUser === undefined) {
+    //user doesn't exit
+    response.status(400);
+    response.send("user doesn't exists");
+  } else {
+    //compare password, hashed password
+    const isPasswordMatched = await bcrypt.compare(password, dbUser.password);
+    if (isPasswordMatched === true) {
+      response.send("Login Successfully");
+    } else {
       response.status(400);
-      response.send("username already exists ");
+      response.send("Invalid Password");
+    }
   }
 });
